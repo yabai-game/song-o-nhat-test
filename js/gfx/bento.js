@@ -102,98 +102,86 @@ g.fillText(ic,cx,58);
 }
 tex.needsUpdate=true;
 }
-function makeCompartmentDish(sideMats){
+const FOOD={karaage:null,sausage:null,veg:null};
+function prepFood(gltf,rotX,rough){
+let mesh=null;
+gltf.scene.updateMatrixWorld(true);
+gltf.scene.traverse((o)=>{if(o.isMesh&&!mesh)mesh=o;});
+const geo=mesh.geometry.clone().applyMatrix4(mesh.matrixWorld);
+if(rotX)geo.rotateX(rotX);
+geo.computeBoundingBox();
+const b=geo.boundingBox;
+geo.translate(-(b.min.x+b.max.x)/2,-b.min.y,-(b.min.z+b.max.z)/2);
+const mat=mesh.material;
+mat.roughness=rough;mat.metalness=0;
+return{geo,mat};
+}
+const DISH_LAYOUT={
+karaage:[[-0.021,-0.006,0.4,0.15,0.82],[0.019,0.007,2.1,-0.2,0.78],[0.0,-0.014,4.0,0.3,0.6]],
+sausage:[[0.0,-0.014,0.08,0,0.95],[0.004,0.012,-0.12,0,0.95]],
+veg:[[-0.02,0.0,0.3,0.35,0.62],[0.021,0.004,2.4,-0.3,0.58]],
+};
+function makeCompartmentDish(){
 const g=new THREE.Group();
-const n1=new THREE.Mesh(new THREE.DodecahedronGeometry(0.020,0),sideMats.karaage);
-n1.position.set(-0.022,0.004,-0.004);
-const n2=new THREE.Mesh(new THREE.DodecahedronGeometry(0.019,0),sideMats.karaage);
-n2.position.set(0.004,0.005,0.006);
-const n3=new THREE.Mesh(new THREE.DodecahedronGeometry(0.018,0),sideMats.karaage);
-n3.position.set(0.026,0.003,-0.005);
-g.add(n1,n2,n3);
-g.userData.pieces=[n1,n2,n3];
+const sets={};
+for(const key of ITEM_KEYS){
+const sub=new THREE.Group();
+for(const[x,z,ry,tilt,s]of DISH_LAYOUT[key]){
+const m=new THREE.Mesh(FOOD[key].geo,FOOD[key].mat);
+m.position.set(x,0,z);
+m.rotation.set(tilt,ry,0);
+m.scale.setScalar(s);
+m.castShadow=true;
+sub.add(m);
+}
+sub.visible=false;
+sets[key]=sub;
+g.add(sub);
+}
+g.userData.sets=sets;
 return g;
 }
-function setDishClusterMaterial(cluster,mat){
-for(const m of cluster.userData.pieces)m.material=mat;
+function setDish(cluster,key){
+const sets=cluster.userData.sets;
+for(const k in sets)sets[k].visible=k===key;
 }
-const _fpOffset=new THREE.Vector3(0.13,-0.15,-0.34);
-const _fpTipLocal=new THREE.Vector3(-0.085,0.04,-0.16);
+const _fpOffset=new THREE.Vector3(0.03,-0.012,0);
+const _fpTipLocal=new THREE.Vector3(-0.008,-0.153,-0.412);
 const _fpTipWorldOffset=new THREE.Vector3();
 const _fpBaseWorld=new THREE.Vector3();
 const _fpTargetWorld=new THREE.Vector3();
 const _fpCompZ=[-0.070,0.000,0.070];
-export function makeFpTongs(sideMats){
-const mats=sideMats||{
-karaage:new THREE.MeshStandardMaterial({color:'#d98a2e',roughness:0.65}),
-sausage:new THREE.MeshStandardMaterial({color:'#c8423a',roughness:0.55}),
-veg:new THREE.MeshStandardMaterial({color:'#4c9a4a',roughness:0.65}),
-};
-const gloveMat=new THREE.MeshStandardMaterial({color:'#7cc8f5',roughness:0.42,metalness:0.04});
-const cuffMat=new THREE.MeshStandardMaterial({color:'#64b5e8',roughness:0.48});
-const steelMat=new THREE.MeshStandardMaterial({color:'#dce3e8',metalness:0.85,roughness:0.18});
+export function makeFpTongs(fpModel){
 const group=new THREE.Group();
 const rig=new THREE.Group();
 group.add(rig);
-const handGrp=new THREE.Group();
-handGrp.position.set(-0.042,0.025,-0.025);
-handGrp.rotation.set(0.32,0.38,0.22);
-const cuff=new THREE.Mesh(new THREE.CylinderGeometry(0.028,0.033,0.085,12),cuffMat);
-cuff.rotation.x=Math.PI/2;
-cuff.position.set(0,-0.008,0.048);
-const palm=new THREE.Mesh(new THREE.SphereGeometry(0.034,12,10),gloveMat);
-palm.scale.set(0.92,0.78,1.28);
-palm.position.set(0,0,0);
-const thumb=new THREE.Mesh(new THREE.CapsuleGeometry(0.012,0.028,4,8),gloveMat);
-thumb.position.set(-0.026,0.008,-0.012);
-thumb.rotation.set(-0.4,0.3,0.5);
-handGrp.add(cuff,palm,thumb);
-rig.add(handGrp);
-const tongsGrp=new THREE.Group();
-tongsGrp.position.set(-0.032,0.02,-0.025);
-tongsGrp.rotation.set(0.14,0.38,0);
-const hinge=new THREE.Mesh(new THREE.CylinderGeometry(0.009,0.009,0.020,10),steelMat);
-hinge.rotation.z=Math.PI/2;
-tongsGrp.add(hinge);
-const makeBlade=(sign)=>{
-const piv=new THREE.Group();
-const arm=new THREE.Mesh(new THREE.BoxGeometry(0.004,0.011,0.155),steelMat);
-arm.position.set(sign*0.009,0,-0.076);
-const tip=new THREE.Mesh(new THREE.CylinderGeometry(0.011,0.008,0.026,8),steelMat);
-tip.rotation.x=Math.PI/2;
-tip.scale.set(0.35,1,1.15);
-tip.position.set(sign*0.008,0,-0.152);
-piv.add(arm,tip);
-piv.rotation.y=sign*0.09;
-return piv;
-};
-const bladeA=makeBlade(1);
-const bladeB=makeBlade(-1);
-tongsGrp.add(bladeA,bladeB);
-const foodCluster=makeCompartmentDish(mats);
-foodCluster.position.set(0,0,-0.152);
-foodCluster.scale.setScalar(0.85);
+const fp=fpModel.scene.clone(true);
+fp.traverse((o)=>{
+if(!o.isMesh)return;
+o.castShadow=true;
+o.frustumCulled=false;
+if(/steel/i.test(o.material.name))Object.assign(o.material,{metalness:0.6,roughness:0.3});
+});
+rig.add(fp);
+const foodCluster=makeCompartmentDish();
+foodCluster.position.copy(_fpTipLocal);
+foodCluster.position.y-=0.012;
+foodCluster.scale.setScalar(0.7);
 foodCluster.visible=false;
-tongsGrp.add(foodCluster);
-rig.add(tongsGrp);
-group.traverse((o)=>{if(o.isMesh)o.castShadow=true;});
+rig.add(foodCluster);
+const mats=FOOD;
 let mode=null;
 let timer=0;
 const dur=0.25;
 let targetX=0;
 let targetComp=0;
-function setPinch(k){
-const p=Math.max(0,Math.min(1,k));
-const ang=0.10-p*0.075;
-bladeA.rotation.y=ang;
-bladeB.rotation.y=-ang;
-}
+function setPinch(){}
 function triggerPlace(itemKey='karaage',trayWorldX=0,compIdx=0){
 mode='place';
 timer=0;
 targetX=trayWorldX;
 targetComp=compIdx;
-if(mats[itemKey])setDishClusterMaterial(foodCluster,mats[itemKey]);
+if(mats[itemKey])setDish(foodCluster,itemKey);
 foodCluster.visible=true;
 setPinch(1);
 }
@@ -230,7 +218,6 @@ const cz=_fpCompZ[Math.max(0,Math.min(2,targetComp))];
 _fpTipWorldOffset.copy(_fpTipLocal).applyQuaternion(cam.quaternion);
 _fpTargetWorld.set(targetX+0.064,BELT_Y+0.045,cz).sub(_fpTipWorldOffset);
 group.position.lerpVectors(_fpBaseWorld,_fpTargetWorld,w);
-rig.rotation.x=-0.22*w;
 if(p>=0.52){
 foodCluster.visible=false;
 setPinch(1-(p-0.52)/0.48);
@@ -241,7 +228,7 @@ const flickZ=p<0.45?0.04:-0.24*((p-0.45)/0.55);
 _fpTipWorldOffset.copy(_fpTipLocal).applyQuaternion(cam.quaternion);
 _fpTargetWorld.set(targetX,BELT_Y+0.05+0.05*w,flickZ).sub(_fpTipWorldOffset);
 group.position.lerpVectors(_fpBaseWorld,_fpTargetWorld,w);
-rig.rotation.x=0.45*Math.sin(p*Math.PI*2);
+rig.rotation.x=0.05*Math.sin(p*Math.PI*2);
 }
 }
 return{
@@ -291,7 +278,7 @@ ume.position.set(-0.082,0.035,0);
 rice.add(riceBed,ume);
 const compZ=[-0.070,0.000,0.070];
 const compartments=compZ.map((cz)=>{
-const cl=makeCompartmentDish(sideMats);
+const cl=makeCompartmentDish();
 cl.position.set(0.064,0.024,cz);
 cl.visible=false;
 g.add(cl);
@@ -306,8 +293,8 @@ g.userData={rim,rice,hair,compartments};
 return g;
 }
 export async function buildBento(){
-const[conveyor,bentoBox,steelSink,foodPan]=await Promise.all(
-['conveyor','bento_box','steel_sink','food_pan'].map(loadModel),
+const[conveyor,bentoBox,steelSink,foodPan,karaageModel,sausageModel,vegModel,fpModel]=await Promise.all(
+['conveyor','bento_box','steel_sink','food_pan','bento_karaage','bento_sausage','bento_veg','bento_fp'].map(loadModel),
 );
 const scene=new THREE.Scene();
 scene.background=new THREE.Color('#eef4f8');
@@ -504,31 +491,30 @@ o.receiveShadow=true;
 });
 scene.add(fp);
 }
+FOOD.karaage=prepFood(karaageModel,-Math.PI/2,0.8);
+FOOD.sausage=prepFood(sausageModel,0,0.42);
+FOOD.sausage.mat=new THREE.MeshStandardMaterial({color:'#b8442f',roughness:0.38});
+FOOD.sausage.geo.scale(1,1.55,1.55);
+FOOD.veg=prepFood(vegModel,0,0.75);
 const piecesPerPan=12;
-const sideMats={
-karaage:new THREE.MeshStandardMaterial({color:'#d98a2e',roughness:0.65}),
-sausage:new THREE.MeshStandardMaterial({color:'#c8423a',roughness:0.55}),
-veg:new THREE.MeshStandardMaterial({color:'#4c9a4a',roughness:0.65}),
-};
-const dishGeos={
-karaage:new THREE.DodecahedronGeometry(0.026,0),
-sausage:new THREE.CapsuleGeometry(0.013,0.032,4,8),
-veg:new THREE.DodecahedronGeometry(0.024,1),
-};
+const sideMats={karaage:FOOD.karaage.mat,sausage:FOOD.sausage.mat,veg:FOOD.veg.mat};
+const panScale={karaage:0.95,sausage:0.9,veg:0.8};
 for(const key of ITEM_KEYS){
 const pans=panAssignments.filter((p)=>p.kind===key);
-const inst=new THREE.InstancedMesh(dishGeos[key],sideMats[key],pans.length*piecesPerPan);
+const inst=new THREE.InstancedMesh(FOOD[key].geo,FOOD[key].mat,pans.length*piecesPerPan);
 inst.castShadow=true;
 inst.receiveShadow=true;
+s1.setScalar(panScale[key]);
 let idx=0;
 for(let pi=0;pi<pans.length;pi++){
 const pa=pans[pi];
 for(let k=0;k<piecesPerPan;k++){
 const colIdx=k%4,rowIdx=Math.floor(k/4);
-const ox=(colIdx-1.5)*0.058+((k*17)%5-2)*0.004;
-const oz=(rowIdx-1)*0.056+((k*13)%5-2)*0.004;
-const oy=0.916+(k%2)*0.012;
-e.set(key==='sausage'?Math.PI/2:0.2*k,0.5*k,key==='sausage'?0.3*(k%3-1):0.1*k);
+const ox=(colIdx-1.5)*0.06+((k*17)%5-2)*0.004;
+const oz=(rowIdx-1)*0.06+((k*13)%5-2)*0.004;
+const oy=0.893+(k%2)*0.01;
+if(key==='sausage')e.set(0,0.35*((k*7)%5-2),0.08*(k%3-1));
+else e.set(0.25*((k*3)%3-1),0.9*k,0.2*((k*5)%3-1));
 q.setFromEuler(e);
 p.set(pa.x+ox,oy,pa.z+oz);
 inst.setMatrixAt(idx++,m4.compose(p,q,s1));
@@ -537,6 +523,7 @@ inst.setMatrixAt(idx++,m4.compose(p,q,s1));
 inst.instanceMatrix.needsUpdate=true;
 scene.add(inst);
 }
+s1.set(1,1,1);
 const zw=zoneWorld();
 const zoneW=zw.x1-zw.x0;
 const zoneCenterX=(zw.x0+zw.x1)/2;
@@ -582,7 +569,7 @@ rejectTray.visible=false;
 scene.add(rejectTray);
 let rejectAnimT=-1;
 let rejectStartX=0;
-const fpTongs=makeFpTongs(sideMats);
+const fpTongs=makeFpTongs(fpModel);
 fpTongs.setVisible(false);
 scene.add(fpTongs.group);
 const lineWorkers=await Promise.all(
@@ -633,7 +620,7 @@ let slotIdx=prefIdx>=0&&!comps[prefIdx].visible
 :comps.findIndex((c)=>!c.visible);
 if(slotIdx>=0&&sideMats[itemKey]){
 comps[slotIdx].visible=true;
-setDishClusterMaterial(comps[slotIdx],sideMats[itemKey]);
+setDish(comps[slotIdx],itemKey);
 }
 }
 const showIcon=!t.done&&!t.missed&&t.x>=BENTO.ZONE0-BENTO.LOOKAHEAD-3.5&&t.x<=BENTO.ZONE1;
