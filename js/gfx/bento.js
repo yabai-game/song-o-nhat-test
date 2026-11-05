@@ -117,18 +117,33 @@ mat.roughness=rough;mat.metalness=0;
 return{geo,mat};
 }
 const DISH_LAYOUT={
-karaage:[[-0.021,-0.006,0.4,0.15,0.82],[0.019,0.007,2.1,-0.2,0.78],[0.0,-0.014,4.0,0.3,0.6]],
-sausage:[[0.0,-0.014,0.08,0,0.95],[0.004,0.012,-0.12,0,0.95]],
-veg:[[-0.02,0.0,0.3,0.35,0.62],[0.021,0.004,2.4,-0.3,0.58]],
+karaage:[
+[-0.054,0,-0.006,0.4,0.18,1.05],[-0.018,0,0.008,2.1,-0.22,1.08],[0.019,0,-0.007,4.0,0.2,1.05],[0.055,0,0.006,1.2,-0.16,1.02],
+[-0.036,0.014,0.0,5.1,0.35,0.98],[0.0,0.016,-0.002,2.8,-0.3,1.0],[0.037,0.014,0.003,0.9,0.32,0.96],
+],
+sausage:[
+[-0.037,0,-0.019,0.06,0,1.15],[0.037,0,-0.018,-0.05,0,1.15],[-0.036,0,0.0,-0.08,0,1.15],
+[0.038,0,0.001,0.07,0,1.15],[-0.037,0,0.019,0.04,0,1.15],[0.036,0,0.019,-0.06,0,1.15],
+[-0.012,0.017,-0.008,0.35,0,1.12],[0.016,0.017,0.009,-0.3,0,1.12],
+],
+veg:[
+[-0.056,0,0.006,0.3,0.3,0.95],[-0.019,0,-0.008,2.4,-0.28,1.0],[0.019,0,0.008,4.4,0.26,0.98],[0.056,0,-0.006,1.1,-0.3,0.95],
+[-0.037,0.008,0.012,3.3,0.6,0.85],[0.037,0.008,-0.012,5.6,-0.6,0.85],
+],
 };
-function makeCompartmentDish(){
+const BITE_LAYOUT={
+karaage:[[0,0,0,0.4,0.2,1.0]],
+sausage:[[0,0,0,0.0,0,1.1]],
+veg:[[0,0,0,0.3,0.2,0.95]],
+};
+function makeCompartmentDish(layout=DISH_LAYOUT){
 const g=new THREE.Group();
 const sets={};
 for(const key of ITEM_KEYS){
 const sub=new THREE.Group();
-for(const[x,z,ry,tilt,s]of DISH_LAYOUT[key]){
+for(const[x,y,z,ry,tilt,s]of layout[key]){
 const m=new THREE.Mesh(FOOD[key].geo,FOOD[key].mat);
-m.position.set(x,0,z);
+m.position.set(x,y,z);
 m.rotation.set(tilt,ry,0);
 m.scale.setScalar(s);
 m.castShadow=true;
@@ -163,10 +178,9 @@ o.frustumCulled=false;
 if(/steel/i.test(o.material.name))Object.assign(o.material,{metalness:0.6,roughness:0.3});
 });
 rig.add(fp);
-const foodCluster=makeCompartmentDish();
+const foodCluster=makeCompartmentDish(BITE_LAYOUT);
 foodCluster.position.copy(_fpTipLocal);
-foodCluster.position.y-=0.012;
-foodCluster.scale.setScalar(0.7);
+foodCluster.position.y-=0.014;
 foodCluster.visible=false;
 rig.add(foodCluster);
 const mats=FOOD;
@@ -496,9 +510,9 @@ FOOD.sausage=prepFood(sausageModel,0,0.42);
 FOOD.sausage.mat=new THREE.MeshStandardMaterial({color:'#b8442f',roughness:0.38});
 FOOD.sausage.geo.scale(1,1.55,1.55);
 FOOD.veg=prepFood(vegModel,0,0.75);
-const piecesPerPan=12;
+const piecesPerPan=30;
 const sideMats={karaage:FOOD.karaage.mat,sausage:FOOD.sausage.mat,veg:FOOD.veg.mat};
-const panScale={karaage:0.95,sausage:0.9,veg:0.8};
+const panScale={karaage:1.1,sausage:1.2,veg:1.05};
 for(const key of ITEM_KEYS){
 const pans=panAssignments.filter((p)=>p.kind===key);
 const inst=new THREE.InstancedMesh(FOOD[key].geo,FOOD[key].mat,pans.length*piecesPerPan);
@@ -509,10 +523,11 @@ let idx=0;
 for(let pi=0;pi<pans.length;pi++){
 const pa=pans[pi];
 for(let k=0;k<piecesPerPan;k++){
-const colIdx=k%4,rowIdx=Math.floor(k/4);
-const ox=(colIdx-1.5)*0.06+((k*17)%5-2)*0.004;
-const oz=(rowIdx-1)*0.06+((k*13)%5-2)*0.004;
-const oy=0.893+(k%2)*0.01;
+const top=k>=20,kk=top?k-20:k;
+const colIdx=top?kk%5:kk%5,rowIdx=top?Math.floor(kk/5):Math.floor(kk/4*0.8);
+const ox=(colIdx-2)*0.054+(top?0.027:0)+((k*17)%5-2)*0.004;
+const oz=top?(rowIdx-0.5)*0.08:(Math.floor(kk/5)-1.5)*0.054+((k*13)%5-2)*0.004;
+const oy=0.893+(top?0.018:(k%2)*0.006);
 if(key==='sausage')e.set(0,0.35*((k*7)%5-2),0.08*(k%3-1));
 else e.set(0.25*((k*3)%3-1),0.9*k,0.2*((k*5)%3-1));
 q.setFromEuler(e);
