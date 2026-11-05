@@ -4,6 +4,7 @@ import{mergeGeometries}from'three/addons/utils/BufferGeometryUtils.js';
 import{canvasTexture,signTexture,makeSun,loadModel}from'./stage.js';
 import{makeCharacter,makeSanitaryCap,wearHelmet}from'./chars.js';
 import{BENTO,ITEMS,ITEM_KEYS,DEFECTS}from'../core/bento_rules.js';
+import{beltToWorldX,zoneWorld}from'../core/bento_view.js';
 const BELT_X0=-22.5;
 const BELT_Y=0.95;
 const BELT_Z=0;
@@ -115,6 +116,151 @@ return g;
 }
 function setDishClusterMaterial(cluster,mat){
 for(const m of cluster.userData.pieces)m.material=mat;
+}
+const _fpOffset=new THREE.Vector3(0.13,-0.15,-0.34);
+const _fpTipLocal=new THREE.Vector3(-0.085,0.04,-0.16);
+const _fpTipWorldOffset=new THREE.Vector3();
+const _fpBaseWorld=new THREE.Vector3();
+const _fpTargetWorld=new THREE.Vector3();
+const _fpCompZ=[-0.070,0.000,0.070];
+export function makeFpTongs(sideMats){
+const mats=sideMats||{
+karaage:new THREE.MeshStandardMaterial({color:'#d98a2e',roughness:0.65}),
+sausage:new THREE.MeshStandardMaterial({color:'#c8423a',roughness:0.55}),
+veg:new THREE.MeshStandardMaterial({color:'#4c9a4a',roughness:0.65}),
+};
+const gloveMat=new THREE.MeshStandardMaterial({color:'#7cc8f5',roughness:0.42,metalness:0.04});
+const cuffMat=new THREE.MeshStandardMaterial({color:'#64b5e8',roughness:0.48});
+const steelMat=new THREE.MeshStandardMaterial({color:'#dce3e8',metalness:0.85,roughness:0.18});
+const group=new THREE.Group();
+const rig=new THREE.Group();
+group.add(rig);
+const handGrp=new THREE.Group();
+handGrp.position.set(-0.042,0.025,-0.025);
+handGrp.rotation.set(0.32,0.38,0.22);
+const cuff=new THREE.Mesh(new THREE.CylinderGeometry(0.028,0.033,0.085,12),cuffMat);
+cuff.rotation.x=Math.PI/2;
+cuff.position.set(0,-0.008,0.048);
+const palm=new THREE.Mesh(new THREE.SphereGeometry(0.034,12,10),gloveMat);
+palm.scale.set(0.92,0.78,1.28);
+palm.position.set(0,0,0);
+const thumb=new THREE.Mesh(new THREE.CapsuleGeometry(0.012,0.028,4,8),gloveMat);
+thumb.position.set(-0.026,0.008,-0.012);
+thumb.rotation.set(-0.4,0.3,0.5);
+handGrp.add(cuff,palm,thumb);
+rig.add(handGrp);
+const tongsGrp=new THREE.Group();
+tongsGrp.position.set(-0.032,0.02,-0.025);
+tongsGrp.rotation.set(0.14,0.38,0);
+const hinge=new THREE.Mesh(new THREE.CylinderGeometry(0.009,0.009,0.020,10),steelMat);
+hinge.rotation.z=Math.PI/2;
+tongsGrp.add(hinge);
+const makeBlade=(sign)=>{
+const piv=new THREE.Group();
+const arm=new THREE.Mesh(new THREE.BoxGeometry(0.004,0.011,0.155),steelMat);
+arm.position.set(sign*0.009,0,-0.076);
+const tip=new THREE.Mesh(new THREE.CylinderGeometry(0.011,0.008,0.026,8),steelMat);
+tip.rotation.x=Math.PI/2;
+tip.scale.set(0.35,1,1.15);
+tip.position.set(sign*0.008,0,-0.152);
+piv.add(arm,tip);
+piv.rotation.y=sign*0.09;
+return piv;
+};
+const bladeA=makeBlade(1);
+const bladeB=makeBlade(-1);
+tongsGrp.add(bladeA,bladeB);
+const foodCluster=makeCompartmentDish(mats);
+foodCluster.position.set(0,0,-0.152);
+foodCluster.scale.setScalar(0.85);
+foodCluster.visible=false;
+tongsGrp.add(foodCluster);
+rig.add(tongsGrp);
+group.traverse((o)=>{if(o.isMesh)o.castShadow=true;});
+let mode=null;
+let timer=0;
+const dur=0.25;
+let targetX=0;
+let targetComp=0;
+function setPinch(k){
+const p=Math.max(0,Math.min(1,k));
+const ang=0.10-p*0.075;
+bladeA.rotation.y=ang;
+bladeB.rotation.y=-ang;
+}
+function triggerPlace(itemKey='karaage',trayWorldX=0,compIdx=0){
+mode='place';
+timer=0;
+targetX=trayWorldX;
+targetComp=compIdx;
+if(mats[itemKey])setDishClusterMaterial(foodCluster,mats[itemKey]);
+foodCluster.visible=true;
+setPinch(1);
+}
+function triggerReject(trayWorldX=0){
+mode='reject';
+timer=0;
+targetX=trayWorldX;
+foodCluster.visible=false;
+setPinch(0.6);
+}
+function syncCamera(cam,dt=0){
+cam.updateMatrixWorld();
+_fpBaseWorld.copy(_fpOffset).applyMatrix4(cam.matrixWorld);
+group.quaternion.copy(cam.quaternion);
+rig.position.set(0,0,0);
+rig.rotation.set(0,0,0);
+if(!mode){
+group.position.copy(_fpBaseWorld);
+return;
+}
+timer+=dt;
+if(timer>=dur){
+mode=null;
+timer=0;
+foodCluster.visible=false;
+setPinch(0);
+group.position.copy(_fpBaseWorld);
+return;
+}
+const p=timer/dur;
+if(mode==='place'){
+const w=Math.sin(p*Math.PI);
+const cz=_fpCompZ[Math.max(0,Math.min(2,targetComp))];
+_fpTipWorldOffset.copy(_fpTipLocal).applyQuaternion(cam.quaternion);
+_fpTargetWorld.set(targetX+0.064,BELT_Y+0.045,cz).sub(_fpTipWorldOffset);
+group.position.lerpVectors(_fpBaseWorld,_fpTargetWorld,w);
+rig.rotation.x=-0.22*w;
+if(p>=0.52){
+foodCluster.visible=false;
+setPinch(1-(p-0.52)/0.48);
+}
+}else if(mode==='reject'){
+const w=Math.sin(p*Math.PI);
+const flickZ=p<0.45?0.04:-0.24*((p-0.45)/0.55);
+_fpTipWorldOffset.copy(_fpTipLocal).applyQuaternion(cam.quaternion);
+_fpTargetWorld.set(targetX,BELT_Y+0.05+0.05*w,flickZ).sub(_fpTipWorldOffset);
+group.position.lerpVectors(_fpBaseWorld,_fpTargetWorld,w);
+rig.rotation.x=0.45*Math.sin(p*Math.PI*2);
+}
+}
+return{
+group,
+foodCluster,
+setVisible(v){
+group.visible=!!v;
+if(!v){
+mode=null;
+timer=0;
+foodCluster.visible=false;
+setPinch(0);
+}
+},
+setPinch,
+triggerPlace,
+triggerReject,
+syncCamera,
+};
 }
 function makeRawTray(trayMat,rimMat,riceMat,umeboshiMat,sideMats,hairMat){
 const g=new THREE.Group();
@@ -391,24 +537,25 @@ inst.setMatrixAt(idx++,m4.compose(p,q,s1));
 inst.instanceMatrix.needsUpdate=true;
 scene.add(inst);
 }
-const zoneW=BENTO.ZONE1-BENTO.ZONE0;
-const zoneCenterX=BELT_X0+(BENTO.ZONE0+BENTO.ZONE1)/2;
+const zw=zoneWorld();
+const zoneW=zw.x1-zw.x0;
+const zoneCenterX=(zw.x0+zw.x1)/2;
 const zonePlane=new THREE.Mesh(
-new THREE.PlaneGeometry(zoneW,0.64),
+new THREE.PlaneGeometry(zoneW,0.40),
 new THREE.MeshBasicMaterial({color:'#f5c71a',transparent:true,opacity:0.30,depthWrite:false}),
 );
 zonePlane.rotation.x=-Math.PI/2;
 zonePlane.position.set(zoneCenterX,BELT_Y+0.013,BELT_Z);
 scene.add(zonePlane);
 const railMat=new THREE.MeshStandardMaterial({color:'#f2b705',emissive:'#b88600',emissiveIntensity:0.25,roughness:0.35});
-for(const dz of[-0.36,0.36]){
-const r=new THREE.Mesh(new THREE.BoxGeometry(zoneW,0.03,0.04),railMat);
+for(const dz of[-0.20,0.20]){
+const r=new THREE.Mesh(new THREE.BoxGeometry(zoneW,0.03,0.035),railMat);
 r.position.set(zoneCenterX,BELT_Y+0.022,BELT_Z+dz);
 scene.add(r);
 }
-for(const dx of[-zoneW/2,zoneW/2]){
-const bar=new THREE.Mesh(new THREE.BoxGeometry(0.035,0.025,0.74),railMat);
-bar.position.set(zoneCenterX+dx,BELT_Y+0.020,BELT_Z);
+for(const xEdge of[zw.x0,zw.x1]){
+const bar=new THREE.Mesh(new THREE.BoxGeometry(0.035,0.025,0.435),railMat);
+bar.position.set(xEdge,BELT_Y+0.020,BELT_Z);
 scene.add(bar);
 }
 const trayMat=new THREE.MeshStandardMaterial({color:'#181a1f',roughness:0.20,metalness:0.16});
@@ -422,14 +569,22 @@ const group=new THREE.Group();
 const raw=makeRawTray(trayMat,rimMat,riceMat,umeboshiMat,sideMats,hairMat);
 const badge=makeOrderSprite();
 const sprite=new THREE.Sprite(badge.mat);
-sprite.scale.set(0.86,0.38,1);
-sprite.position.set(0,0.45,0);
+sprite.scale.set(0.30,0.13,1);
+sprite.position.set(0,0.17,0);
 sprite.renderOrder=10;
 group.add(raw,sprite);
 group.visible=false;
 scene.add(group);
 pool.push({group,raw,sprite,badge,sig:''});
 }
+const rejectTray=makeRawTray(trayMat,rimMat,riceMat,umeboshiMat,sideMats,hairMat);
+rejectTray.visible=false;
+scene.add(rejectTray);
+let rejectAnimT=-1;
+let rejectStartX=0;
+const fpTongs=makeFpTongs(sideMats);
+fpTongs.setVisible(false);
+scene.add(fpTongs.group);
 const lineWorkers=await Promise.all(
 WORKER_SPOTS.map(async(cfg,i)=>{
 const ch=await makeCharacter(cfg.kind,BENTO_UNIFORM);
@@ -455,12 +610,13 @@ function syncTrays(trays){
 const n=Math.min(pool.length,trays.length);
 for(let i=0;i<n;i++){
 const t=trays[i],slot=pool[i];
-if(t.rejected){
+const wx=beltToWorldX(t.x);
+if(t.rejected||wx<-1.9||wx>1.6){
 slot.group.visible=false;
 continue;
 }
 slot.group.visible=true;
-slot.group.position.set(BELT_X0+t.x,BELT_Y+0.011,BELT_Z);
+slot.group.position.set(wx,BELT_Y+0.011,BELT_Z);
 slot.raw.visible=true;
 const u=slot.raw.userData;
 u.rice.visible=t.defect!=='norice';
@@ -495,6 +651,21 @@ for(let i=n;i<pool.length;i++)pool[i].group.visible=false;
 }
 function clearTrays(){
 for(const slot of pool)slot.group.visible=false;
+rejectTray.visible=false;
+rejectAnimT=-1;
+}
+function flickRejectTray(trayWorldX=0,defect='hair'){
+rejectStartX=trayWorldX;
+rejectAnimT=0;
+const u=rejectTray.userData;
+u.rice.visible=defect!=='norice';
+u.hair.visible=defect==='hair';
+u.rim.rotation.y=defect==='lid'?0.24:0;
+u.rim.position.x=defect==='lid'?0.024:0;
+for(let c=0;c<u.compartments.length;c++)u.compartments[c].visible=false;
+rejectTray.position.set(rejectStartX,BELT_Y+0.011,BELT_Z);
+rejectTray.rotation.set(0,0,0);
+rejectTray.visible=true;
 }
 function update(dt){
 for(const w of lineWorkers){
@@ -504,6 +675,21 @@ w.timer=w.period;
 w.ch.triggerPick(w.dish,0.38);
 }
 w.ch.update(dt);
+}
+if(rejectAnimT>=0){
+rejectAnimT+=dt/0.25;
+if(rejectAnimT>=1){
+rejectAnimT=-1;
+rejectTray.visible=false;
+}else{
+const p=rejectAnimT;
+rejectTray.position.set(
+rejectStartX,
+BELT_Y+0.011+Math.sin(p*Math.PI)*0.14,
+BELT_Z-p*0.68,
+);
+rejectTray.rotation.x=-p*1.15;
+}
 }
 }
 const blocks=[
@@ -516,9 +702,11 @@ scene,
 sun,
 blocks,
 lineWorkers,
+fpTongs,
 showcase:{pos:new THREE.Vector3(...BENTO_ROOM.showcase.pos),look:new THREE.Vector3(...BENTO_ROOM.showcase.look)},
 syncTrays,
 clearTrays,
+flickRejectTray,
 update,
 };
 }
