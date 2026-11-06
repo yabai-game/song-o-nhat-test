@@ -1364,8 +1364,8 @@ card(`<div class="big">🍫</div><h2>バレンタインデー — Ngày Valentin
 card(`<div class="big">🍫</div><h2>バレンタイン — Phong tục Valentine tại Nhật</h2>
     <p>Ở chỗ làm, mọi người trao nhau những hộp sô-cô-la nhỏ <b>義理チョコ (Giri-choco — sô-cô-la lịch sự cảm ơn đồng nghiệp)</b> giá 500 ¥/phần.</p>
     <p class="lesson">💡 Văn hóa Nhật Bản phân biệt <b>14/2 バレンタイン</b> và <b>14/3 ホワイトデー (White Day — ngày đáp lễ)</b>. Bạn có thể mua 義理チョコ tặng đồng nghiệp hoặc bỏ qua đều được.</p>`,[
-{label:'🍫 Mua 3 phần 義理チョコ tặng đồng nghiệp (1.500 ¥ · 🤝 +6, 🧠 +3, 🎌 +2)',on:()=>pick(true,3)},
-{label:'🍫 Mua 1 phần 義理チョコ (500 ¥ · 🤝 +2, 🧠 +3, 🎌 +2)',cls:'ghost',on:()=>pick(true,1)},
+{label:'🍫 Mua 3 phần 義理チョコ tặng đồng nghiệp (1,500 ¥ · 🤝 +6, 👷 +3, 🧠 +3, 🎌 +2)',on:()=>pick(true,3)},
+{label:'🍫 Mua 1 phần 義理チョコ (500 ¥ · 🤝 +2, 👷 +1, 🧠 +3, 🎌 +2)',cls:'ghost',on:()=>pick(true,1)},
 {label:'😊 Không mua, chỉ chúc mọi người vui vẻ (0 ¥ · 🧠 +1, 🎌 +1)',cls:'ghost',on:()=>pick(false,0)},
 ]);
 }
@@ -2192,7 +2192,7 @@ dayHud('🚨 Vi phạm quy định');
 if(rep.lostJob){
 card(`<div class="big">🚨</div><h2>Bị chấm dứt hợp đồng vì tái phạm làm thêm chui!</h2>
       <p>Nghiệp đoàn và công ty phát hiện bạn tiếp tục đi làm thêm ngoài tư cách lưu trú (<span class="jp">資格外活動違反</span>) lần thứ ${rep.count}. Bạn bị buộc thôi việc tại nơi làm hiện tại (👷 −30, 🧠 −20).</p>
-      <p class="lesson">⚠️ Để không phải về nước giữa chừng, bạn bắt buộc phải đăng ký chuyển sang ngành khác và làm lại từ bậc 1 (S13).</p>`,[
+      <p class="lesson">⚠️ Để không phải về nước giữa chừng, bạn bắt buộc phải đăng ký chuyển sang ngành khác và làm lại từ bậc 1.</p>`,[
 {label:'🔄 Chuyển ngành bắt buộc →',on:()=>{
 const nextJob=targets(S)[0]||'bento';
 S.job=nextJob;
