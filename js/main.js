@@ -2967,6 +2967,16 @@ const CREDITS=[
 ['Lon cà phê','JPN Vending Machine Drink Cans','adenotoxin','0411cdc46a5d41caa1311168874a1581','CC BY 4.0'],
 ['Chai trà xanh','JPN Petbottle','adenotoxin','efaac575105b4df583642794005a5afd','CC BY 4.0'],
 ['Cơm nắm','Stylized Onigiri | Rice Balls','fairvals','ae4b88bd16d440299cd65a64f6fc5b8b','CC BY 4.0'],
+['Quầy tính tiền','Cash Counter / Checkout','Umar','1a0b9a90e22c4cbf876f4b822b51391b','CC BY 4.0'],
+['Máy tính tiền','Cash Register','nathanielmoore','119e19154a6e40429c47449b7b1e2717','CC BY 4.0'],
+['Đầu đọc thẻ','Payment terminal','nofurion','12376a29b015453da5f7a0deede21dd8','CC BY 4.0'],
+['Tủ kính đồ nóng','Bakery Display Case','mmcmindes','50e0f0f7e37b4a80a6b809a8831835c2','CC BY 4.0'],
+['Máy cà phê','Coffee machine','Xyincs','fd28b66c1585437fa8e00c1f1aafe6dd','CC BY 4.0'],
+['Bánh sừng bò','Croissant','nathanielmoore','51600a9a53284b18a9b1623ca54d9a49','CC BY 4.0'],
+['Bánh mì kẹp','Sandwich','Gabriel Gauthier','db8a57a8e20a47778f660a3103c51486','CC BY 4.0'],
+['Mì ly','Low-Poly 3D Model of Blank Cup Noodle Models','fairuzkamil2','52fddb67cd2f429490dcdb938bac02ae','CC BY 4.0'],
+['Kem ốc quế','Icecream (Low Poly, Game Ready)','LiveToWin34','5736985d6deb4af0a4e2c0ba885f72f8','CC BY 4.0'],
+['Bánh bao','Steamed Bun','LitoStudio','135a3804d5ae4d5294e0d786d36aab20','CC BY 4.0'],
 ];
 function creditsScreen(){
 hideAll();

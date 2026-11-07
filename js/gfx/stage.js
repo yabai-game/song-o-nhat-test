@@ -3,7 +3,7 @@ import*as THREE from'three';
 import{GLTFLoader}from'three/addons/loaders/GLTFLoader.js';
 import{MeshoptDecoder}from'three/addons/libs/meshopt_decoder.module.js';
 import{createAdaptiveDpr}from'../core/perf.js';
-export const MODEL_V='22';
+export const MODEL_V='23';
 export const canvas=document.getElementById('c');
 export const LOW_MEM=typeof matchMedia==='function'&&matchMedia('(pointer: coarse)').matches;
 export const renderer=new THREE.WebGLRenderer({canvas,antialias:!LOW_MEM,powerPreference:'high-performance'});
