@@ -2,21 +2,21 @@
 export const KONBINI_STORE={
 width:9.0,
 depth:11.0,
-bounds:{x0:-3.6,x1:3.6,z0:-3.6,z1:2.2},
-start:{x:-2.6,z:-3.1,yaw:0.45},
+bounds:{x0:-3.2,x1:1.8,z0:-2.4,z1:2.6},
+start:{x:-3.0,z:-1.8,yaw:Math.PI/2},
 greeterAt:{x:0.9,z:0.2,yaw:-2.5},
 blocks:[
 {x:-0.45,z:1.45,r:0.62},
 {x:0.45,z:1.45,r:0.62},
-{x:-2.3,z:-1.8,r:0.55},
-{x:0.0,z:-2.2,r:0.55},
-{x:2.3,z:-1.8,r:0.55},
+{x:-0.3,z:-3.0,r:0.7},
+{x:2.4,z:-3.0,r:0.7},
+{x:-3.0,z:-3.0,r:0.6},
 ],
 player:{x:0,z:2.18,yaw:Math.PI},
 tencho:{x:1.45,z:1.95,yaw:-2.6},
 foreman:{x:1.45,z:1.95,yaw:-2.6},
 talkPlayer:{x:-0.2,z:0.4},
-door:{x:-2.8,z:-3.4},
+door:{x:-3.1,z:-1.8},
 queueSpot:{x:-0.32,z:-0.65,yaw:0},
 counterCustomer:{x:0,z:0.55,yaw:0},
 counterY:0.92,
@@ -30,7 +30,7 @@ itemSlots:[
 registerPos:[-0.42,1.06,1.35],
 hotCasePos:[0.44,1.08,1.35],
 coffeePos:[1.18,1.08,1.55],
-showcase:{pos:[-2.8,2.55,-2.6],look:[0.2,1.05,1.1]},
+showcase:{pos:[-2.2,2.55,-1.6],look:[0.2,1.05,1.4]},
 };
 export function konbiniCamera(aspect=1){
 if(aspect<1){

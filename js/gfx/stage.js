@@ -1,8 +1,9 @@
 /*! © 2026 YABAI · Sống ở Nhật 3D · all rights reserved */
 import*as THREE from'three';
 import{GLTFLoader}from'three/addons/loaders/GLTFLoader.js';
+import{MeshoptDecoder}from'three/addons/libs/meshopt_decoder.module.js';
 import{createAdaptiveDpr}from'../core/perf.js';
-export const MODEL_V='21';
+export const MODEL_V='22';
 export const canvas=document.getElementById('c');
 export const LOW_MEM=typeof matchMedia==='function'&&matchMedia('(pointer: coarse)').matches;
 export const renderer=new THREE.WebGLRenderer({canvas,antialias:!LOW_MEM,powerPreference:'high-performance'});
@@ -98,6 +99,7 @@ sun.position.set(sx+offset[0],p.y+offset[1],sz+offset[2]);sun.target.position.se
 return sun;
 }
 const loader=new GLTFLoader();
+loader.setMeshoptDecoder(MeshoptDecoder);
 const cache={};
 const texLoader=new THREE.TextureLoader();
 const brandCache={};

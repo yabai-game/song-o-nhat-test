@@ -2784,8 +2784,22 @@ const opts=shiftOpts(st.data,st.hard,S);
 const rk=rankOf(S.jobXp||0);
 const meta={unit:JOBS.konbini.unit,rankLabel:demo?'🎮 Chế độ thử':`${hudCalText(S)} · 🎖️ ${rk + 1}/10 ${ranksOf('konbini')[rk]}`,
 onRetry:()=>{if(!demo){retryCost(G.S);save(G.S,storage);}}};
-const begin=()=>G.konbini.start(opts,{player:P,foreman},meta,(r)=>(demo?finishDemoShift('konbini',demoDay,r):shiftDone(st,r)));
-if(demo){begin();return;}
+const warmP=G.stages.konbini.warmTextures?G.stages.konbini.warmTextures(renderer,4):Promise.resolve();
+let starting=false;
+const begin=()=>{
+if(starting)return;
+starting=true;
+const launch=()=>{
+show('modal',false);
+G.konbini.start(opts,{player:P,foreman},meta,(r)=>(demo?finishDemoShift('konbini',demoDay,r):shiftDone(st,r)));
+};
+if(G.stages.konbini.isTexturesWarmed?.()){
+launch();
+return;
+}
+show('modal',true);
+warmP.then(launch);
+};
 card(`<h2>${st.hard ? '🔥 ' : ''}${esc(opts.label)}</h2>
     ${opts.jp ? `<p class="jpline">${esc(opts.jp)}</p>` : ''}
     <p>${esc(opts.vi || 'Đứng sau quầy thu ngân, chào khách, quét mã vạch, trả lời yêu cầu và thối đúng tiền thừa.')}</p>
@@ -2793,7 +2807,7 @@ card(`<h2>${st.hard ? '🔥 ' : ''}${esc(opts.label)}</h2>
     <p class="lesson">🏪 Chào <b>いらっしゃいませ</b> → Chạm từng món để quét (ピッ♪) → Trả lời câu hỏi (nếu có) → Chọn mệnh giá tiền thối rồi bấm <b>✔ Đưa tiền thừa</b> → Chào <b>ありがとうございました</b>.</p>`,[
 {label:'Bắt đầu ca →',on:begin},
 ]);
-dayHud(st.label);
+if(!demo)dayHud(st.label);
 G.camRig.snap(G.stages.konbini.showcase.pos,G.stages.konbini.showcase.look);
 }
 function shiftDone(st,r){
@@ -2948,6 +2962,10 @@ const CREDITS=[
 ['Bông cải xanh (xưởng cơm hộp)','Broccoli','meerschaumdigital','0fb58ca488b64298ab8af6f0372e66b9','CC BY 4.0'],
 ['Kẹp gắp inox','metal tongs','kosicky.jozef2308','86628581455a4c5d85faae2511076afe','CC BY 4.0'],
 ['Tay đeo găng (đổi màu, đổi tư thế)','Hand With Gloves','teenjust500','5a6a434b8ec943ffacc581358781eecb','CC BY 4.0'],
+['Konbini (trong cửa hàng)','Lowpoly convenience store interior','kolorn','28bf62dc9fa748b487ca4dec72c74aac','Sketchfab Free Standard'],
+['Lon cà phê','JPN Vending Machine Drink Cans','adenotoxin','0411cdc46a5d41caa1311168874a1581','CC BY 4.0'],
+['Chai trà xanh','JPN Petbottle','adenotoxin','efaac575105b4df583642794005a5afd','CC BY 4.0'],
+['Cơm nắm','Stylized Onigiri | Rice Balls','fairvals','ae4b88bd16d440299cd65a64f6fc5b8b','CC BY 4.0'],
 ];
 function creditsScreen(){
 hideAll();
