@@ -21,6 +21,7 @@ import{buildCare}from'./gfx/care.js';
 import{buildBento,BENTO_ROOM}from'./gfx/bento.js';
 import{buildLotus,LOTUS_FIELD}from'./gfx/lotus.js';
 import{buildKonbiniStore,KONBINI_STORE,KONBINI_COLORS}from'./gfx/konbini_store.js';
+import{clampToBox}from'./core/konbini_view.js';
 import{buildStation}from'./gfx/station.js';
 import{Crowd}from'./gfx/crowd.js';
 import{CareShift,seatFolk}from'./work/care_shift.js';
@@ -3129,6 +3130,7 @@ if(!portrait)vLook.z-=1.2;
 vPos.set(vLook.x+(portrait?6.2:4.6),a.y+2.1,vLook.z+0.9);
 }
 else vPos.set(vLook.x-1.2,a.y+2.3,vLook.z+(portrait?6.4:4.8));
+if(G.stageId==='konbini'){const k=clampToBox([vPos.x,vPos.y,vPos.z]);vPos.set(k[0],k[1],k[2]);}
 G.camRig.to(vPos,vLook,dt,4);
 }else if(G.mode==='talk'){
 const a=P.holder.position;
@@ -3136,6 +3138,7 @@ if(G.stageId==='dorm'){
 vLook.set(a.x,a.y+0.65,a.z);vPos.set(a.x,a.y+2.0,a.z+3.8);
 }else{
 vLook.set(a.x,a.y+0.6,a.z);vPos.set(a.x,a.y+2.4,a.z+6);
+if(G.stageId==='konbini'){const k=clampToBox([vPos.x,vPos.y,vPos.z]);vPos.set(k[0],k[1],k[2]);}
 }
 G.camRig.to(vPos,vLook,dt,4);
 }

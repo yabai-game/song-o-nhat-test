@@ -32,6 +32,15 @@ hotCasePos:[0.44,1.08,1.35],
 coffeePos:[1.18,1.08,1.55],
 showcase:{pos:[-2.2,2.55,-1.6],look:[0.2,1.05,1.4]},
 };
+export const KONBINI_CAM_BOX={x0:-3.3,x1:1.85,y0:0.4,y1:3.4,z0:-10.2,z1:3.65};
+export function clampToBox(p,box=KONBINI_CAM_BOX){
+const c=(v,a,b)=>Math.min(b,Math.max(a,v));
+return[c(p[0],box.x0,box.x1),c(p[1],box.y0,box.y1),c(p[2],box.z0,box.z1)];
+}
+export function konbiniWalkCamera(px,pz){
+const pos=clampToBox([0.35*px+0.5,3.25,3.55]);
+return{pos,look:[px,0.9,pz]};
+}
 export function konbiniCamera(aspect=1){
 if(aspect<1){
 return{
