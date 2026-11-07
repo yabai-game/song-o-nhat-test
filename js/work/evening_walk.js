@@ -119,6 +119,7 @@ this._show(dayLabel);
 if(spot==='room')this.target={...ROUTE.start,name:'Ký túc xá さくら寮',enter:true};
 else this.target=SPOT[spot];
 if(from==='station')this.street('dusk',ROUTE.bounds.x1-0.5,24.6,-Math.PI/2);
+else if(from==='konbini')this.street('dusk',spot==='konbini'?ROUTE.konbini.x+2.0:ROUTE.konbini.x,ROUTE.konbini.z,-Math.PI/2);
 else this.street('dusk',ROUTE.gate.x-0.5,ROUTE.gate.z+0.9,-Math.PI/2);
 this.tip('お疲れ様でした！',spot==='room'?'Hết ca rồi. Về ký túc xá thôi (có thể ghé 🛒 Siêu thị).':`Hết ca rồi. Ghé ${this.target.name} trên đường về.`,5);
 }
