@@ -32,7 +32,7 @@ import{dayOffSummary}from'./core/dayoff_rules.js';
 import{$,show,card,toast,deltaChips,esc,Overhead}from'./ui/ui.js';
 import{PLAY,dayKey,tickPlay}from'./core/playtime.js';
 import{newState,save,load,clearSave,yen,jpLevel,applyFx}from'./core/state.js';
-import{JOBS,NPCS,INTRO,rankOf,rankPay,daysOf,ranksOf}from'./core/jobs.js';
+import{JOBS,NPCS,INTRO,rankOf,rankPay,daysOf,ranksOf,SOON_ON_PUBLIC}from'./core/jobs.js';
 import{WELL,checkCollapse,lowBars,sickLeave,skillInfo,markDinner}from'./core/wellbeing.js';
 import{CAREER,targets,cannotStudy,startStudy,quitStudy}from'./core/career.js';
 import{daySteps,lifeDaySteps,shiftOpts,shiftEnd,chooseTalk,completeStep,weekEval,sleep,retryCost,DAYS}from'./core/story.js';
@@ -74,6 +74,7 @@ ACHIEVEMENTS,checkAchievements,ensureFestivalState,visitFestival,
 }from'./core/festival.js';
 const storage=(()=>{try{return window.localStorage;}catch{return{getItem:()=>null,setItem(){},removeItem(){}};}})();
 import{Music,pickTrack}from'./audio/music.js';
+if(globalThis.SON_PUBLIC)for(const j of SOON_ON_PUBLIC)if(JOBS[j])JOBS[j].ready=false;
 const music=new Music();
 let musicT=0;
 const G={
@@ -994,7 +995,7 @@ hideAll();G.mode='creator';
 const box=$('joblist');box.textContent='';
 for(const[id,j]of Object.entries(JOBS)){
 const b=document.createElement('button');b.type='button';b.className='job';b.disabled=!j.ready;
-b.innerHTML=`<span class="ic">${j.icon}</span><b>${esc(j.sector)} — ${esc(j.name)}</b><span class="meta">📍 ${esc(j.place)} · ${esc(j.area)}</span><span class="d">${esc(j.desc)}${j.ready ? '' : ' <span class="soon">· Sắp mở</span>'}</span>`;
+b.innerHTML=`<span class="ic">${j.icon}</span><b>${esc(j.sector)} — ${esc(j.name)}</b><span class="meta">📍 ${esc(j.place)} · ${esc(j.area)}</span><span class="d">${esc(j.desc)}${j.ready ? '' : ' <span class="soon">· 🔒 Sắp ra mắt</span>'}</span>`;
 b.addEventListener('click',()=>startGame(id));
 box.appendChild(b);
 }
@@ -2976,8 +2977,8 @@ const rows=[
 ...daysOf('bento').map((d,i)=>({label:`🍱 Ngày ${i + 1}: ${name(d)}${starStr('bento', i)}`,on:()=>demoShift('bento',i)})),
 ...daysOf('lotus').map((d,i)=>({label:`🪷 Ngày ${i + 1}: ${name(d)}${d.b.rain ? ' 🌧️' : ''}${starStr('lotus', i)}`,on:()=>demoShift('lotus',i)})),
 ...daysOf('konbini').map((d,i)=>({label:`🏪 Ngày ${i + 1}: ${name(d)}${starStr('konbini', i)}`,on:()=>demoShift('konbini',i)})),
-];
-card('<h2>🎮 Thử ca làm 3D</h2><p>🎌 Ngày nghỉ ở đền · 🗑️ Phân loại rác · 🛒 Siêu thị · 🍳 Nấu cơm · 👷 Công trường · 👵 Viện dưỡng lão · 🍱 Xưởng cơm hộp · 🪷 Ruộng sen · 🏪 Konbini · không tính điểm.</p>',[...rows,{label:'← Quay lại',cls:'ghost',on:titleScreen}]);
+].filter((r)=>{const m=/^(👷|👵|🍱|🪷|🏪)/.exec(r.label);const job=m&&{'👷':'site','👵':'care','🍱':'bento','🪷':'lotus','🏪':'konbini'}[m[1]];return!job||JOBS[job].ready;});
+card(`<h2>🎮 Thử ca làm 3D</h2><p>🎌 Ngày nghỉ ở đền · 🗑️ Phân loại rác · 🛒 Siêu thị · 🍳 Nấu cơm · 👷 Công trường · 👵 Viện dưỡng lão · 🍱 Xưởng cơm hộp · 🪷 Ruộng sen · 🏪 Konbini${JOBS.konbini.ready ? '' : ' (sắp ra mắt)'} · không tính điểm.</p>`,[...rows,{label:'← Quay lại',cls:'ghost',on:titleScreen}]);
 }
 async function demoDayOff(){
 hideAll();hideNpcs();
