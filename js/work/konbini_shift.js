@@ -127,7 +127,7 @@ this.custTag.el.classList.add('care','konbini-tag');
 this.queueTag=this.overhead.tag(this.queueAnchor,'',false,0);
 this.queueTag.el.classList.add('care','konbini-tag');
 this.queueTag.el.hidden=true;
-const aspect=(canvas.clientWidth||375)/Math.max(1,canvas.clientHeight||812);
+const aspect=camera.aspect||((window.innerWidth||375)/Math.max(1,window.innerHeight||812));
 const kc=konbiniCamera(aspect);
 this.prevFov=camera.fov;
 camera.fov=kc.fov;
@@ -265,29 +265,44 @@ this.queueTag.el.innerHTML=`<span class="kt-line">${q.waitSaid ? '⏳ Đang ch�
 }
 }
 }
-clampOverhead(){
-const H=canvas.clientHeight||812;
+_refreshHudBounds(W,H){
+const now=performance.now();
+if(now-(this._obsTs||0)<200&&this._obsW===W&&this._obsH===H)return;
+this._obsTs=now;
+this._obsW=W;
+this._obsH=H;
 let minTop=8;
-for(const sel of['#shifthud .top','#sh-rank','#sh-bars','#sh-chips','#sh-ticket','#sh-tip']){
-const el=document.querySelector(sel);
-if(!el||el.hidden||el.offsetParent===null)continue;
-const st=getComputedStyle(el);
-if(st.display==='none'||st.visibility==='hidden'||Number(st.opacity)===0)continue;
+for(const id of['sh-rank','sh-bars','sh-chips','sh-ticket','sh-tip']){
+const el=$(id);
+if(!el||el.hidden)continue;
 const r=el.getBoundingClientRect();
+if(r.height>0)minTop=Math.max(minTop,r.bottom+5);
+}
+const topBar=document.querySelector('#shifthud .top');
+if(topBar&&!topBar.hidden){
+const r=topBar.getBoundingClientRect();
 if(r.height>0)minTop=Math.max(minTop,r.bottom+5);
 }
 const actsEl=$('acts');
 const actsTop=actsEl&&!actsEl.hidden?actsEl.getBoundingClientRect().top:H-10;
-const maxBottom=Math.max(minTop+28,actsTop-5);
-const W=canvas.clientWidth||375;
+this._minTop=minTop;
+this._maxBottom=Math.max(minTop+28,actsTop-5);
+}
+clampOverhead(){
+const W=window.innerWidth||canvas.clientWidth||375;
+const H=window.innerHeight||canvas.clientHeight||812;
+this._refreshHudBounds(W,H);
+const minTop=this._minTop||8;
+const maxBottom=this._maxBottom||(H-15);
 const isLand=W>H;
-const tags=[this.custTag,this.queueTag].filter((t)=>t&&t.el&&!t.el.hidden);
+const tags=[this.custTag,this.queueTag].filter((t)=>t&&t.el&&!t.el.hidden&&t.vis&&t.w&&t.h);
+let r0Left=0,r0Right=0;
 for(let i=0;i<tags.length;i++){
-const el=tags[i].el;
-const r=el.getBoundingClientRect();
-if(!r.width||!r.height)continue;
-let top=r.top;
-let left=r.left;
+const t=tags[i];
+const el=t.el;
+const w=t.w,h=t.h;
+let top=t.top;
+let left=t.left;
 if(isLand&&i===0){
 left=14;
 top=Math.max(minTop,96);
@@ -295,13 +310,21 @@ top=Math.max(minTop,96);
 left=14;
 top=Math.max(minTop+34,130);
 }else if(i===1&&tags[0]){
-const r0=tags[0].el.getBoundingClientRect();
-if(left<r0.right+6&&left+r.width>r0.left-6){
-left=Math.max(6,r0.left-r.width-8);
+if(left<r0Right+6&&left+w>r0Left-6){
+left=Math.max(6,r0Left-w-8);
 }
 }
-top=Math.max(minTop,Math.min(top,maxBottom-r.height));
-el.style.transform=`translate(${Math.round(left)}px, ${Math.round(top)}px)`;
+top=Math.max(minTop,Math.min(top,maxBottom-h));
+const rx=Math.round(left),ry=Math.round(top);
+if(i===0){
+r0Left=rx;
+r0Right=rx+w;
+}
+const tr=`translate(${rx}px, ${ry}px)`;
+if(t._tr!==tr){
+t._tr=tr;
+el.style.transform=tr;
+}
 }
 }
 hud(){
@@ -735,7 +758,7 @@ if(this.endT>=0&&!this.paused){
 this.endT-=dt;
 if(this.endT<0)this.win();
 }
-const aspect=(canvas.clientWidth||375)/Math.max(1,canvas.clientHeight||812);
+const aspect=camera.aspect||((window.innerWidth||375)/Math.max(1,window.innerHeight||812));
 const kc=konbiniCamera(aspect);
 this.camPos.set(kc.eye[0],kc.eye[1],kc.eye[2]);
 this.camLook.set(kc.look[0],kc.look[1],kc.look[2]);

@@ -189,7 +189,7 @@ this.tip('急いで！',`Còn ≤ 3 phút tới chuyến cuối kịp giờ (${s
 }
 const txt=`⏰ ${clock(s.min)} · 朝礼 ${clock(MORNING.CHOREI)}${trainPill}${late ? ' · muộn rồi!' : ''}`;
 if(g.textContent!==txt)g.textContent=txt;
-g.classList.toggle('warn',close);
+if(g.classList.contains('warn')!==close)g.classList.toggle('warn',close);
 const tk=$('sh-ticket');
 if(tk){
 if(s.phase==='platform'){
@@ -199,40 +199,53 @@ const delayTag=s.delay>0?` · 🚨遅れ+${s.delay}分 (${s.delayReasonJp})`:(t1
 const certTag=s.delayCert?' · 📄済':'';
 const boardTxt=`🚉 次発 ${t1.label} 普通${delayTag} · 次々発 ${t2.label}${certTag}`;
 if(tk.textContent!==boardTxt)tk.textContent=boardTxt;
-tk.hidden=false;
-}else{
+if(tk.hidden)tk.hidden=false;
+}else if(!tk.hidden){
 tk.hidden=true;
 }
 }
-for(const a of BUTTONS)this.btn[a.id].hidden=!SHOW[s.phase].includes(a.id);
+const setHid=(b,h)=>{if(b.hidden!==h)b.hidden=h;};
+const setDis=(b,d)=>{if(b.disabled!==d)b.disabled=d;};
+const setHot=(b,hot)=>{if(b.classList.contains('hot')!==hot)b.classList.toggle('hot',hot);};
+for(const a of BUTTONS){
+if(a.id==='trash'&&s.phase==='room')continue;
+if(a.id==='run'&&s.phase==='street')continue;
+if(a.id==='drop'&&s.phase==='street')continue;
+if(a.id==='cert'&&s.phase==='platform')continue;
+setHid(this.btn[a.id],!SHOW[s.phase].includes(a.id));
+}
 if(s.phase==='room'){
-this.btn.eat.disabled=s.ate;
-this.btn.eat.classList.toggle('hot',!s.ate&&this.near(DORM.table,1.4));
+setDis(this.btn.eat,!!s.ate);
+setHot(this.btn.eat,!s.ate&&this.near(DORM.table,1.4));
 const tDone=this.trashDone();
-this.btn.trash.hidden=tDone;
-this.btn.trash.classList.toggle('hot',!tDone&&this.demoTrash);
+setHid(this.btn.trash,tDone);
+setHot(this.btn.trash,!tDone&&!!this.demoTrash);
 const hasBike=!!(this.S?.bike?.owned&&!this.S.bike.stolen);
+const outKey=hasBike?'bike':'walk';
+if(this.btn.out.dataset.modeKey!==outKey){
+this.btn.out.dataset.modeKey=outKey;
 this.btn.out.querySelector('.i').textContent=hasBike?'🚲':'🚪';
 this.btn.out.querySelector('.l').textContent=hasBike?'Đạp xe đi làm':'Ra ngoài';
 this.btn.out.querySelector('.j').textContent=hasBike?'自転車で出勤':'行ってきます';
-this.btn.out.classList.toggle('hot',this.near(DORM.door)||(this.demoTrash&&this.carryingBag));
+}
+setHot(this.btn.out,this.near(DORM.door)||!!(this.demoTrash&&this.carryingBag));
 }else if(s.phase==='street'){
-this.btn.run.hidden=!!this.ridingBike;
-this.btn.drop.hidden=!this.carryingBag;
-this.btn.drop.classList.toggle('hot',this.carryingBag&&this.near(ROUTE.trash,1.9));
-this.btn.drink.disabled=s.drank;
-this.btn.drink.classList.toggle('hot',!s.drank&&this.nearV());
+setHid(this.btn.run,!!this.ridingBike);
+setHid(this.btn.drop,!this.carryingBag);
+setHot(this.btn.drop,!!(this.carryingBag&&this.near(ROUTE.trash,1.9)));
+setDis(this.btn.drink,!!s.drank);
+setHot(this.btn.drink,!s.drank&&this.nearV());
 const suzPos=this.who.suzuki?this.who.suzuki.holder.position:ROUTE.suzuki;
-this.btn.greet.classList.toggle('hot',!s.greeted&&this.near(suzPos,2.2));
+setHot(this.btn.greet,!s.greeted&&this.near(suzPos,2.2));
 }else if(s.phase==='platform'){
 const stopped=this.stages.station.trainState()==='stopped';
-this.btn.board.disabled=!stopped;
-this.btn.board.classList.toggle('hot',stopped);
+setDis(this.btn.board,!stopped);
+setHot(this.btn.board,stopped);
 const showCert=s.delay>0&&!s.delayCert;
-this.btn.cert.hidden=!showCert;
-this.btn.cert.classList.toggle('hot',showCert);
+setHid(this.btn.cert,!showCert);
+setHot(this.btn.cert,showCert);
 }else if(s.phase==='walkin'){
-this.btn.greet.classList.toggle('hot',this.near(this.walkin.greeterAt,2.2));
+setHot(this.btn.greet,this.near(this.walkin.greeterAt,2.2));
 }
 }
 near(pt,r=NEAR){const p=this.who.player.holder.position;return Math.hypot(p.x-pt.x,p.z-pt.z)<r;}
@@ -852,7 +865,8 @@ if(s.phase==='walkin'&&this.greetT<0&&this.near(this.walkin.greeterAt,1.3))this.
 if(this.greetT>=0&&!this.paused){this.greetT+=dt;if(this.greetT>2.4&&!s.over){this.greetT=-1;this.finish();}}
 if(this.rideT>=0&&!this.paused){this.rideT+=dt;if(this.rideT>3.4){this.rideT=-1;this.fadeTo(()=>this.enterCare());}}
 if(this.rise<0&&s.phase!=='wake'&&s.phase!=='ride')P.moveAt(speed);
-camera.fov=portrait?56:46;camera.updateProjectionMatrix();
+const wantFov=portrait?56:46;
+if(camera.fov!==wantFov){camera.fov=wantFov;camera.updateProjectionMatrix();}
 if(s.phase==='wake'||s.phase==='room'){
 const fx=pos.x*0.5,fz=THREE.MathUtils.clamp(pos.z,-1,1.4);
 this.camPos.set(fx,2.9*(portrait?1.25:1),fz+(portrait?4.9:3.9));

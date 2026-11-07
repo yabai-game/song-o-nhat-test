@@ -1,7 +1,8 @@
 /*! © 2026 YABAI · Sống ở Nhật 3D · all rights reserved */
 import{pageview,track}from'./net/stats.js';
 import*as THREE from'three';
-import{renderer,camera,resize,isPortrait,CamRig,loadModel,loadBrand,loadStats,LOW_MEM,trimShadowCasters}from'./gfx/stage.js';
+import{renderer,camera,resize,isPortrait,CamRig,loadModel,loadBrand,loadStats,LOW_MEM,trimShadowCasters,updateAdaptiveDpr}from'./gfx/stage.js';
+import{charStepInterval,shouldCullByFog}from'./core/perf.js';
 import{OUTFITS,SWATCH,ensureSrc,makeCharacter,makeHelmet,makeSanitaryCap,wearHelmet,wearWaders,refHex}from'./gfx/chars.js';
 import{buildTown}from'./gfx/town.js';
 import{buildSite,DECK_Y,WANDER,ROUTE}from'./gfx/site.js';
@@ -277,7 +278,10 @@ return swapPlayer(G.wardrobe[kind]);
 }
 async function spawnFolk(){
 if(!G.folk.length)G.folk=await Promise.all(FOLK_LOOK.map(([kind,top])=>makeCharacter(kind,{top})));
-for(const ch of G.folk)G.stages.care.scene.add(ch.holder);
+for(const ch of G.folk){
+if(LOW_MEM)ch.setCastShadow(false);
+G.stages.care.scene.add(ch.holder);
+}
 seatFolk(G.folk);
 }
 async function spawnWorkers(){
@@ -287,6 +291,7 @@ const kind=i%2?'suit':'hoodie';
 const ch=await makeCharacter(kind,{top:['#1f3148','#5d6168','#2e5a44'][i%3],bottom:'#2b2b30',hair:'#2a2420'});
 const h=makeHelmet(ch,i%2?'#f4f4f0':'#f2c230');
 wearHelmet(ch,h.group);
+if(LOW_MEM)ch.setCastShadow(false);
 const[x,z,xr,zr]=WANDER[i];
 ch.holder.position.set(x,0,z);
 G.stages.site.scene.add(ch.holder);
@@ -3056,27 +3061,46 @@ G.shift.start(opts,{player:G.player,foreman},{unit:JOBS.site.unit,rankLabel:'�
 }
 const clock=new THREE.Clock();
 const vPos=new THREE.Vector3(),vLook=new THREE.Vector3();
+let occludedAcc=0;
+function setCameraFov(fov){
+if(camera.fov!==fov){
+camera.fov=fov;
+camera.updateProjectionMatrix();
+}
+}
 function frame(){
 requestAnimationFrame(frame);
-const dt=Math.min(clock.getDelta(),0.05),t=(G.t+=dt);
+const rawDt=clock.getDelta();
+const dt=Math.min(rawDt,0.05);
 resize();
+const modalEl=$('modal');
+const occluded=(modalEl&&!modalEl.hidden)||(G.mode==='creator'&&G.spin===0);
+if(occluded){
+occludedAcc+=dt;
+if(occludedAcc<0.1)return;
+occludedAcc=0;
+}else{
+occludedAcc=0;
+updateAdaptiveDpr(rawDt*1000);
+}
+const t=(G.t+=dt);
 const st=G.stage,P=G.player;
 if(G.mode==='title'){
 const a=t*0.08;
-camera.fov=isPortrait()?52:42;camera.updateProjectionMatrix();
+setCameraFov(isPortrait()?52:42);
 vPos.set(Math.sin(a)*9,4.2,4+Math.cos(a)*9);vLook.set(0,1.4,-1);
 G.camRig.to(vPos,vLook,dt,2);
 P.yaw=Math.sin(t*0.4)*0.6;
 }else if(G.mode==='creator'){
 G.yaw+=G.spin*dt;P.yaw=G.yaw;
 const b=P.holder.position,portrait=isPortrait();
-camera.fov=portrait?48:38;camera.updateProjectionMatrix();
+setCameraFov(portrait?48:38);
 if(portrait){vPos.set(b.x,b.y+1.1,b.z+6.6);vLook.set(b.x,b.y-0.75,b.z);}
 else{vPos.set(b.x+1.2,b.y+1.2,b.z+4.6);vLook.set(b.x+1.2,b.y+0.8,b.z);}
 G.camRig.to(vPos,vLook,dt,6);
 }else if(G.mode==='talk'&&G.talkPair&&G.talkPair.N){
 const a=G.talkPair.P.holder.position,b=G.talkPair.N.holder.position,portrait=isPortrait();
-camera.fov=portrait?50:40;camera.updateProjectionMatrix();
+setCameraFov(portrait?50:40);
 vLook.set((a.x+b.x)/2,a.y+(portrait?0.4:1.0),(a.z+b.z)/2);
 if(G.talkCam==='street'){
 if(!portrait)vLook.x-=1.2;
@@ -3107,22 +3131,69 @@ musicT=0.5;
 const atWork=G.mode==='shift'||(G.mode==='talk'&&(G.talkCam==='deck'||!!G.player?.helmet?.visible));
 music.set(pickTrack({mode:G.mode,stageId:G.stageId,season:G.S?.life&&G.S?.cal?G.S.cal.season:0,festival:G.stages.shrine?.festival,atWork}));
 }
+const pPos=P.holder.position;
 if(G.streetCrowd){
 const onStreet=G.stageId==='site'&&(G.mode==='morning'||G.mode==='evening'||G.mode==='dayoff');
 G.streetCrowd.setVisible(onStreet);
-if(onStreet)G.streetCrowd.update(dt,P.holder.position);
+if(onStreet)G.streetCrowd.update(dt,pPos);
 }
 if(G.stationCrowd){
 const onStation=G.stageId==='station'&&G.mode==='morning';
 G.stationCrowd.setVisible(onStation);
-if(onStation)G.stationCrowd.update(dt);
+if(onStation)G.stationCrowd.update(dt,pPos);
 }
-if(G.stageId==='site'){updateWorkers(dt);for(const w of G.workers)w.update(dt);}
+if(G.stageId==='site'){
+const onSiteWork=G.mode==='shift'||(G.mode==='talk'&&G.talkCam==='deck');
+if(onSiteWork)updateWorkers(dt);
+for(let i=0;i<G.workers.length;i++){
+const w=G.workers[i];
+if(!onSiteWork){
+if(w.holder.visible)w.holder.visible=false;
+continue;
+}
+const wp=w.holder.position;
+const distSq=(wp.x-pPos.x)**2+(wp.z-pPos.z)**2;
+if(shouldCullByFog(distSq,36)){
+if(w.holder.visible)w.holder.visible=false;
+continue;
+}
+if(!w.holder.visible)w.holder.visible=true;
+const step=charStepInterval(distSq,LOW_MEM);
+if(step<=1)w.update(dt);
+else{
+w._stepAcc=(w._stepAcc||0)+dt;
+w._stepTick=((w._stepTick??i)+1)%step;
+if(w._stepTick===0){w.update(w._stepAcc);w._stepAcc=0;}
+}
+}
+}
 P.update(dt);
-for(const ch of Object.values(G.npcs))if(ch.holder.parent)ch.update(dt);
-if(G.stageId==='care')for(const ch of G.folk)ch.update(dt);
-st.update(dt,t,P.holder.position);
-st.sun.userData.follow(P.holder.position);
+for(const ch of Object.values(G.npcs)){
+if(!ch.holder.parent)continue;
+const np=ch.holder.position;
+const distSq=(np.x-pPos.x)**2+(np.z-pPos.z)**2;
+if(LOW_MEM)ch.setCastShadow(distSq<=64);
+const step=charStepInterval(distSq,LOW_MEM);
+if(step<=1)ch.update(dt);
+else{
+ch._stepAcc=(ch._stepAcc||0)+dt;
+ch._stepTick=((ch._stepTick??0)+1)%step;
+if(ch._stepTick===0){ch.update(ch._stepAcc);ch._stepAcc=0;}
+}
+}
+if(G.stageId==='care'){
+for(let i=0;i<G.folk.length;i++){
+const ch=G.folk[i];
+if(!LOW_MEM)ch.update(dt);
+else{
+ch._stepAcc=(ch._stepAcc||0)+dt;
+ch._stepTick=((ch._stepTick??i)+1)%2;
+if(ch._stepTick===0){ch.update(ch._stepAcc);ch._stepAcc=0;}
+}
+}
+}
+st.update(dt,t,pPos);
+st.sun.userData.follow(pPos);
 renderer.render(st.scene,camera);
 G.overhead.update(dt);
 }
