@@ -128,6 +128,24 @@ for(let i=0;i<bin.length;i++)out[i]=bin.charCodeAt(i);
 return out.buffer;
 }
 export const loadStats={started:0,done:0};
+const TEX_KEYS=['map','alphaMap','emissiveMap','normalMap','roughnessMap','metalnessMap','aoMap'];
+const halfOf=new WeakMap();
+function shrinkForPhone(tex){
+const im=tex.image;
+if(!im||typeof document==='undefined')return;
+let c=halfOf.get(im);
+if(!c){
+const w=im.width||0,h=im.height||0;
+if(Math.max(w,h)<512||(typeof HTMLCanvasElement!=='undefined'&&im instanceof HTMLCanvasElement))return;
+c=document.createElement('canvas');
+c.width=Math.max(1,w>>1);c.height=Math.max(1,h>>1);
+c.getContext('2d').drawImage(im,0,0,c.width,c.height);
+halfOf.set(im,c);
+if(typeof im.close==='function')im.close();
+}
+tex.image=c;
+tex.needsUpdate=true;
+}
 export function loadModel(name){
 if(!cache[name]){
 loadStats.started++;
@@ -149,8 +167,10 @@ m.depthWrite=false;
 }
 if(/^glass/i.test(m.name))Object.assign(m,{transparent:true,opacity:0.16,depthWrite:false});
 if(m.transparent&&m.side===THREE.DoubleSide)m.forceSinglePass=true;
+if(LOW_MEM&&!o.isSkinnedMesh)for(const k of TEX_KEYS)if(m[k])shrinkForPhone(m[k]);
 }
 });
+gltf.parser=null;
 return gltf;
 });
 cache[name].then(()=>{loadStats.done++;},()=>{loadStats.done++;});
