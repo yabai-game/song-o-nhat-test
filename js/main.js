@@ -700,7 +700,7 @@ const flips=r.cards.map((c)=>{
 const d=t;t+=c.best?0:0.45;if(c.best)t+=0.3;
 const img=monsterImg(c);
 return`<div class="tcard t-${c.tier}${c.best ? ' best' : ''}" style="animation-delay:${(c.best ? d + 0.5 : d).toFixed(2)}s">
-      <div class="tc-in"><div class="tc-back"><span>モンスター<br>カード</span></div><div class="tc-face"><img src="img/cards/${esc(img)}.jpg" alt="${esc(c.jp)}"><i class="tc-tier">${esc(c.tier)}</i></div></div></div>`;
+      <div class="tc-in"><div class="tc-back"></div><div class="tc-face"><img src="img/cards/${esc(img)}.jpg" alt="${esc(c.jp)}"><i class="tc-tier">${esc(c.tier)}</i></div></div></div>`;
 }).join('');
 const shop=Math.round(r.value*HOLI.SHOP_BUY_RATE),pf=(n)=>(n>=0?`lãi +${yen(n)}`:`lỗ −${yen(-n)}`);
 const result=()=>{

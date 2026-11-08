@@ -297,20 +297,11 @@ button.small { font-size: 13px; padding: 8px 12px; }
 .tcard .tc-back, .tcard .tc-face { position: absolute; inset: 0; border-radius: 6px; backface-visibility: hidden; -webkit-backface-visibility: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; box-sizing: border-box; overflow: hidden; }
 .tcard .tc-back {
   transform: rotateY(180deg);
-  background:
-    radial-gradient(circle at 50% 42%, rgba(138, 108, 255, 0.42) 0%, transparent 62%),
-    repeating-linear-gradient(45deg, #2d2363 0 5px, #1e1947 5px 10px);
-  color: #ffe89e;
-  font-size: 9.5px;
-  font-weight: 900;
-  line-height: 1.22;
-  letter-spacing: 0.2px;
-  border: 2.5px solid #f0be42;
-  box-shadow: inset 0 0 0 2px rgba(255, 224, 130, 0.35), 0 3px 8px rgba(0, 0, 0, 0.4);
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9), 0 0 6px rgba(255, 206, 74, 0.45);
+  background: #3a1d7a url('../img/cards/back.jpg') center / cover no-repeat; /* YABAI isekai card back */
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4);
 }
 .tcard .tc-back::before {
-  content: '✦';
+  content: none;
   position: absolute;
   font-size: 30px;
   color: rgba(255, 220, 110, 0.16);
