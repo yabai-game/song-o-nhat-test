@@ -97,6 +97,10 @@ tennyuWarned:false,
 juminzeiLate:false,
 zairyuWarned:false,
 };
+}else{
+for(const k of['tennyu','hoken','yucho','juminzei','zairyu']){
+if(typeof S.papers[k]!=='boolean')S.papers[k]=Boolean(S.papers[k]);
+}
 }
 return S.papers;
 }
@@ -290,14 +294,17 @@ correctIdx,
 };
 });
 if(typeof doc==='string'){
+picked.playerName=playerName;
 LAST_FIELDS[doc]=picked;
 }
 return picked;
 }
 export function checkForm(docOrFields,answers=[],S={}){
+const wantName=S&&typeof S.name==='string'&&S.name.trim()?S.name.trim():null;
+const cached=typeof docOrFields==='string'?LAST_FIELDS[docOrFields]:null;
 const fields=Array.isArray(docOrFields)
 ?docOrFields
-:(LAST_FIELDS[docOrFields]||formFields(docOrFields,S));
+:((cached&&(!wantName||cached.playerName===wantName))?cached:formFields(docOrFields,S));
 const wrong=[];
 const wrongIndices=[];
 for(let i=0;i<fields.length;i++){
@@ -330,7 +337,7 @@ const cost=docId==='juminzei'&&(p.juminzeiLate||today>doc.dueDay)
 ?Math.round(JUMINZEI_BASE*JUMINZEI_LATE_RATE)
 :(doc.cost||0);
 if(cost>0&&(S.money||0)<cost){
-return{ok:false,why:'money',cost,deltas:[]};
+return{ok:false,why:'money',cost,min:0,jpGain:0,deltas:[]};
 }
 p[docId]=true;
 const fx={culture:4,mental:2};
