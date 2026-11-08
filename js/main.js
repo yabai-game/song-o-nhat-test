@@ -1183,7 +1183,7 @@ dayHud('💴 Ngày lương · 給与明細');
 const P=G.player;P.holder.rotation.x=0;P.holder.position.set(0.2,0,0.8);P.yaw=0;P.play('idle');
 const remDebt=Math.max(0,(S.debt||0)-p.debt);
 const avail=(S.money||0)+p.net;
-const noYucho=!!(S.papers&&!S.papers.yucho);
+const noYucho=!!(S.papers&&!S.papers.yucho&&totalDays(ensureCal(S))>=PAPER_DOCS.yucho.dueDay);
 const finishNoRemit=()=>{
 applyPay(S,0);
 if(noYucho)applyFx(S,{mental:-2});
@@ -2067,9 +2067,10 @@ runPaperworkForm(doc,()=>townPaperworkVisit(returnTo));
 });
 }
 btns.push({label:'← Quay lại',cls:'ghost',on:()=>{G.resumeCard=null;returnTo();}});
+const anyPaperDone=Object.keys(PAPER_DOCS).some((k)=>S.papers?.[k]===true);
 card(`<h2>🏛️ Tòa hành chính (市役所) & Bưu điện (郵便局)</h2>
     <p>⏰ Giờ hiện tại: <b>${fmtClock(min)}</b> · <b>市役所:</b> ${shiyakuOpen ? '🟢 Đang mở' : '🔴 Đóng cửa'} · <b>郵便局:</b> ${yubinOpen ? '🟢 Đang mở' : '🔴 Đóng cửa'}</p>
-    ${todos.length ? '<p>Chọn thủ tục cần điền tờ khai tiếng Nhật (5–6 mục):</p>' : '<p class="lesson">✅ Bạn đã hoàn thành tất cả giấy tờ hành chính cần thiết!</p>'}`,btns);
+    ${todos.length ? `<p>Chọn thủ tục cần điền tờ khai tiếng Nhật (${anyPaperDone ? '3 mục rút gọn' : '5–6 mục'}):</p>` : '<p class="lesson">✅ Bạn đã hoàn thành tất cả giấy tờ hành chính cần thiết!</p>'}`,btns);
 }
 function runPaperworkForm(doc,onDone){
 const S=G.S;
@@ -2080,10 +2081,11 @@ positionPlayerTown(doc.place==='shiyakusho'?'cityhall':'post');
 const fields=formFields(doc.id,S);
 const wMin=waitTime(doc.id,cal,d.min??9*60);
 const answers={};
-function askField(idx){
-G.resumeCard=()=>askField(idx);
-if(idx>=fields.length){
-const res=checkForm(doc.id,answers,S);
+const allIndices=fields.map((_,i)=>i);
+function askField(queue=allIndices,qPos=0){
+G.resumeCard=()=>askField(queue,qPos);
+if(qPos>=queue.length){
+const res=checkForm(fields,answers,S);
 if(!res.ok){
 d.min=(d.min??540)+res.extraMin;
 save(S,storage);
@@ -2091,12 +2093,13 @@ const wrongLabels=res.wrong.map((fid)=>{
 const f=fields.find((x)=>x.id===fid);
 return f?`${f.jp} (${f.vi})`:fid;
 }).join(', ');
+const retryQueue=Array.isArray(res.wrongIndices)&&res.wrongIndices.length?res.wrongIndices:allIndices;
 const renderWrong=()=>{
 G.resumeCard=renderWrong;
 card(`<div class="big">📝</div><h2>Tờ khai có mục điền chưa đúng!</h2>
             <p>Nhân viên quầy kiểm tra và gạch đỏ mục cần sửa: <b>${esc(wrongLabels)}</b>.</p>
             <p class="lesson">⏳ Bạn mất thêm <b>+${res.extraMin} phút</b> để điền lại và xếp hàng nộp lại.</p>`,[
-{label:'✍️ Điền lại tờ khai →',on:()=>askField(0)},
+{label:'✍️ Điền lại tờ khai →',on:()=>askField(retryQueue,0)},
 {label:'← Để lúc khác',cls:'ghost',on:()=>onDone()},
 ]);
 };
@@ -2124,20 +2127,24 @@ card(`<div class="big">✅</div><h2>Hoàn tất: ${esc(doc.jp)} (${esc(doc.vi)})
 renderDone();
 return;
 }
+const idx=queue[qPos];
 const f=fields[idx];
 const btns=f.options.slice(0,4).map((opt)=>({
 label:opt,
 on:()=>{
 answers[f.id]=opt;
-askField(idx+1);
+askField(queue,qPos+1);
 },
 }));
 btns.push({label:'← Hủy tờ khai',cls:'ghost',on:()=>onDone()});
+const lessonHtml=fields.length<=3
+?`<p class="lesson">💬 Nhân viên: <b>「在留カードを拝見します」</b> — "Cho xem thẻ cư trú, phần còn lại tôi điền giúp." (⏳ chờ ~${wMin}p)</p>`
+:`<p class="lesson">⏳ Thời gian chờ tại quầy dự kiến: ~${wMin} phút.</p>`;
 card(`<h2>${doc.icon} Tờ khai ${esc(doc.jp)} (${idx + 1}/${fields.length})</h2>
       <p>Điền mục <b>${esc(f.jp)}</b> (${esc(f.vi)}):</p>
-      <p class="lesson">⏳ Thời gian chờ tại quầy dự kiến: ~${wMin} phút.</p>`,btns);
+      ${lessonHtml}`,btns);
 }
-askField(0);
+askField(allIndices,0);
 }
 function townMedicalVisit(returnTo){
 const S=G.S;
